@@ -1,0 +1,15 @@
+# Ignore app/config/data directories
+gluetun/
+jellyfin/
+jellyseerr/
+nginx/
+prowlarr/
+qbittorrent/
+radarr/
+sonarr/
+
+# Ignore env
+.env
+
+# Backups
+.old

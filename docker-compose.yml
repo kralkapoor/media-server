@@ -1,0 +1,160 @@
+---
+services:
+
+  gluetun:
+    image: qmcgaw/gluetun
+    container_name: gluetun
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      # - 8888:8888/tcp # HTTP proxy
+      # - 8388:8388/tcp # Shadowsocks
+      # - 8388:8388/udp # Shadowsocks
+      - 8080:8080/tcp # qbittorrent webui
+      - 6881:6881 # torrenting
+      - 6881:6881/udp
+    volumes:
+      - ./gluetun:/gluetun
+    environment:
+      - VPN_SERVICE_PROVIDER=protonvpn
+      - VPN_TYPE=wireguard
+      # Wireguard:
+      - WIREGUARD_PRIVATE_KEY=${WIREGUARD_KEY}
+      - WIREGUARD_ADDRESSES=${WIREGUARD_ADDRESSES}
+      - SERVER_COUNTRIES=${VPN_SERVER_COUNTRIES}
+      - TZ=${TZ}
+      # Server list updater
+      # See https://github.com/qdm12/gluetun-wiki/blob/main/setup/servers.md#update-the-vpn-servers-list
+      # - UPDATER_PERIOD=
+    restart: unless-stopped
+    networks:
+      - media-network
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    depends_on: 
+      - gluetun
+    # all traffic to run through vpn
+    network_mode: "service:gluetun"
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - WEBUI_PORT=8080
+      - TORRENTING_PORT=6881
+    volumes:
+      - ./qbittorrent/appdata:/config
+      - ${DOWNLOADS_DIR}:/downloads
+    # ports:
+    # ports configured on gluetun for vpn
+      #  - 8080:8080
+      #  - 6881:6881
+      #  - 6881:6881/udp
+    restart: unless-stopped
+    
+  npm:
+    image: jc21/nginx-proxy-manager:latest
+    container_name: npm
+    ports:
+    - 80:80 # Public HTTP Port
+    - 443:443 # Public HTTPS Port
+    - 81:81 # Admin Web Port
+    environment:
+    - TZ=${TZ}
+    - DISABLE_IPV6=true
+    volumes:
+    - ./nginx/data:/data
+    - ./nginx/letsencrypt:/etc/letsencrypt
+    restart: unless-stopped
+    networks:
+      - media-network
+
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: jellyfin
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ./jellyfin/library:/config
+      - ${TV_DIR}:/data/tvshows
+      - ${MOVIES_DIR}:/data/movies
+    devices:
+      - /dev/dri:/dev/dri
+    ports:
+      - 8096:8096
+      - 7359:7359/udp #local network discovery
+    restart: unless-stopped
+    networks: 
+      - media-network
+
+  jellyseerr:
+    image: fallenbagel/jellyseerr:latest
+    container_name: jellyseerr
+    environment:
+      - LOG_LEVEL=debug
+      - TZ=${TZ}
+    ports:
+      - 5055:5055
+    volumes:
+      - ./jellyseerr/config:/app/config
+    restart: unless-stopped
+    networks:
+      - media-network
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ./radarr/data:/config
+      - ${MOVIES_DIR}:/movies
+      - ${DOWNLOADS_DIR}:/downloads
+    ports:
+      - 7878:7878
+    restart: unless-stopped
+    networks:
+      - media-network
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ./sonarr/data:/config
+      - ${TV_DIR}:/tv
+      - ${DOWNLOADS_DIR}:/downloads
+    ports:
+      - 8989:8989
+    restart: unless-stopped
+    networks: 
+      - media-network
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment:
+      - PUID={PUID}
+      - PGID={PGID}
+      - TZ={TZ}
+    volumes:
+      - ./prowlarr/data:/config
+    ports:
+      - 9696:9696
+    restart: unless-stopped
+    networks: 
+      - media-network
+
+networks:
+  media-network:
+    driver: bridge
