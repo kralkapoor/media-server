@@ -2,7 +2,7 @@
 services:
 
   gluetun:
-    image: qmcgaw/gluetun
+    image: qmcgaw/gluetun:latest
     container_name: gluetun
     cap_add:
       - NET_ADMIN
@@ -17,6 +17,7 @@ services:
       - 6881:6881/udp
     volumes:
       - ./gluetun:/gluetun
+      - ./gluetun-auth:/gluetun/auth
     environment:
       - VPN_SERVICE_PROVIDER=protonvpn
       - VPN_TYPE=wireguard
@@ -25,18 +26,57 @@ services:
       - WIREGUARD_ADDRESSES=${WIREGUARD_ADDRESSES}
       - SERVER_COUNTRIES=${VPN_SERVER_COUNTRIES}
       - TZ=${TZ}
+      - PORT_FORWARD_ONLY=on
+      - VPN_PORT_FORWARDING=on  
       # Server list updater
       # See https://github.com/qdm12/gluetun-wiki/blob/main/setup/servers.md#update-the-vpn-servers-list
       # - UPDATER_PERIOD=
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8000/v1/openvpn/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     restart: unless-stopped
     networks:
       - media-network
+
+  portforward-sync:
+    image: alpine:latest
+    container_name: "portforward-sync"
+    network_mode: "service:gluetun"
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    command: |
+      /bin/sh -c '
+        apk add curl jq &&
+        echo "Starting port sync sidecar monitor..." &&
+        LAST_PORT="" &&
+        while true; do
+          CURRENT_PORT=$$(curl -s http://127.0.0.1:8000/v1/openvpn/portforwarded | jq -r ".port" 2>/dev/null) &&
+          if [ "$$CURRENT_PORT" = "null" ] || [ -z "$$CURRENT_PORT" ]; then
+            echo "$(date): No port forwarding available, retrying in 60s"
+          elif [ "$$CURRENT_PORT" != "$$LAST_PORT" ]; then
+            echo "$(date): Port changed from $$LAST_PORT to $$CURRENT_PORT, updating qBittorrent..." &&
+            RESPONSE=$$(wget -O- --post-data "json={\"listen_port\":$$CURRENT_PORT}" http://127.0.0.1:8080/api/v2/app/setPreferences 2>&1) &&
+            echo "$(date): qBittorrent response: $$RESPONSE" &&
+            LAST_PORT=$$CURRENT_PORT
+          else
+            # echo "$(date): Port unchanged ($$CURRENT_PORT), checking again in 60s"
+          fi &&
+          sleep 60
+        done'
+    environment:
+      - TZ=${TZ}
+    restart: unless-stopped
 
   qbittorrent:
     image: lscr.io/linuxserver/qbittorrent:latest
     container_name: qbittorrent
     depends_on: 
-      - gluetun
+      gluetun:
+        condition: service_healthy
     # all traffic to run through vpn
     network_mode: "service:gluetun"
     environment:
@@ -53,6 +93,11 @@ services:
       #  - 8080:8080
       #  - 6881:6881
       #  - 6881:6881/udp
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     restart: unless-stopped
     
   npm:
@@ -95,6 +140,8 @@ services:
   jellyseerr:
     image: fallenbagel/jellyseerr:latest
     container_name: jellyseerr
+    depends_on:
+      - jellyfin
     environment:
       - LOG_LEVEL=debug
       - TZ=${TZ}
@@ -109,6 +156,8 @@ services:
   radarr:
     image: lscr.io/linuxserver/radarr:latest
     container_name: radarr
+    depends_on:
+      - prowlarr
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -126,6 +175,8 @@ services:
   sonarr:
     image: lscr.io/linuxserver/sonarr:latest
     container_name: sonarr
+    depends_on:
+      - prowlarr
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -144,9 +195,9 @@ services:
     image: lscr.io/linuxserver/prowlarr:latest
     container_name: prowlarr
     environment:
-      - PUID={PUID}
-      - PGID={PGID}
-      - TZ={TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
     volumes:
       - ./prowlarr/data:/config
     ports:
