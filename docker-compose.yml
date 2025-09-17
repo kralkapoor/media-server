@@ -33,10 +33,10 @@ services:
       # - UPDATER_PERIOD=
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8000/v1/openvpn/status"]
-      interval: 30s
+      interval: 60s
       timeout: 10s
       retries: 3
-      start_period: 30s
+      start_period: 90s
     restart: unless-stopped
     networks:
       - media-network
@@ -59,11 +59,12 @@ services:
             echo "$(date): No port forwarding available, retrying in 60s"
           elif [ "$$CURRENT_PORT" != "$$LAST_PORT" ]; then
             echo "$(date): Port changed from $$LAST_PORT to $$CURRENT_PORT, updating qBittorrent..." &&
-            RESPONSE=$$(wget -O- --post-data "json={\"listen_port\":$$CURRENT_PORT}" http://127.0.0.1:8080/api/v2/app/setPreferences 2>&1) &&
+            RESPONSE=$$(curl -s -X POST -d "json={\"listen_port\":$$CURRENT_PORT}" http://127.0.0.1:8080/api/v2/app/setPreferences 2>&1) &&
             echo "$(date): qBittorrent response: $$RESPONSE" &&
             LAST_PORT=$$CURRENT_PORT
           else
-            # echo "$(date): Port unchanged ($$CURRENT_PORT), checking again in 60s"
+            # No change - continue
+            :
           fi &&
           sleep 60
         done'
