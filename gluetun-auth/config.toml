@@ -1,0 +1,10 @@
+[[roles]]
+name = "qbittorrent"
+# Define a list of routes with the syntax "Http-Method /path"
+routes = ["GET /v1/openvpn/portforwarded"]
+# No auth required since the control server port will not be exposed publically
+auth = "none"
+# auth = "basic"
+# username = "myusername"
+# password = "mypassword"
+
