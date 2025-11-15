@@ -32,7 +32,7 @@ services:
       # See https://github.com/qdm12/gluetun-wiki/blob/main/setup/servers.md#update-the-vpn-servers-list
       # - UPDATER_PERIOD=
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8000/v1/openvpn/status"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8000/v1/vpn/status"]
       interval: 60s
       timeout: 10s
       retries: 3
@@ -54,7 +54,7 @@ services:
         echo "Starting port sync sidecar monitor..." &&
         LAST_PORT="null" &&
         while true; do
-          CURRENT_PORT=$$(curl -s http://127.0.0.1:8000/v1/openvpn/portforwarded | jq -r ".port" 2>/dev/null) &&
+          CURRENT_PORT=$$(curl -s http://127.0.0.1:8000/v1/portforward | jq -r ".port" 2>/dev/null) &&
           if [ "$$CURRENT_PORT" = "null" ] || [ -z "$$CURRENT_PORT" ]; then
             echo "$(date): No port forwarding available, retrying in 60s"
           elif [ "$$CURRENT_PORT" != "$$LAST_PORT" ]; then
