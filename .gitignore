@@ -2,6 +2,7 @@
 gluetun/
 jellyfin/
 jellyseerr/
+seerr/
 nginx/
 prowlarr/
 qbittorrent/
