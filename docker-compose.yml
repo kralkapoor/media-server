@@ -144,7 +144,7 @@ services:
     depends_on:
       - jellyfin
     environment:
-      - LOG_LEVEL=debug
+      - LOG_LEVEL=info
       - TZ=${TZ}
     ports:
       - 5055:5055
