@@ -9,6 +9,7 @@ qbittorrent/
 radarr/
 sonarr/
 tdarr/
+maintainerr/
 
 # Ignore env
 .env

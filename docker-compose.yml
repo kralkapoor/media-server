@@ -144,7 +144,7 @@ services:
     depends_on:
       - jellyfin
     environment:
-      - LOG_LEVEL=info
+      - LOG_LEVEL=warn
       - TZ=${TZ}
     ports:
       - 5055:5055
@@ -216,34 +216,18 @@ services:
     networks: 
       - media-network
 
-  # tdarr:
-  #   container_name: tdarr
-  #   image: ghcr.io/haveagitgat/tdarr:latest
-  #   restart: unless-stopped
-  #   network_mode: bridge
-  #   ports:
-  #     - 8265:8265 # webUI port
-  #     - 8266:8266 # server port
-  #   environment:
-  #     - TZ=${TZ}
-  #     - PUID=${PUID}
-  #     - PGID=${PGID}
-  #     - UMASK_SET=002
-  #     - serverIP=0.0.0.0
-  #     - serverPort=8266
-  #     - webUIPort=8265
-  #     - internalNode=true
-  #     - inContainer=true
-  #     - ffmpegVersion=7
-  #     - nodeName=MainNode
-  #     - transcodecpuWorkers=1
-  #     - healthcheckcpuWorkers=1
-  #   volumes:
-  #     - ./tdarr/server:/app/server
-  #     - ./tdarr/configs:/app/configs
-  #     - ./tdarr/logs:/app/logs
-  #     - ${MEDIA_DIR}:/media
-  #     - ./tdarr/transcode_cache:/temp
+  maintainerr:
+    image: ghcr.io/maintainerr/maintainerr:latest
+    user: 1000:1000
+    volumes:
+      - ./maintainerr:/opt/data
+    environment:
+      - TZ=${TZ}
+    ports:
+      - 6246:6246
+    restart: unless-stopped
+    networks:
+      - media-network
 
 networks:
   media-network:
