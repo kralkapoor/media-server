@@ -216,18 +216,18 @@ services:
     networks: 
       - media-network
 
-  maintainerr:
-    image: ghcr.io/maintainerr/maintainerr:latest
-    user: 1000:1000
-    volumes:
-      - ./maintainerr:/opt/data
-    environment:
-      - TZ=${TZ}
-    ports:
-      - 6246:6246
-    restart: unless-stopped
-    networks:
-      - media-network
+  # maintainerr:
+  #   image: ghcr.io/maintainerr/maintainerr:latest
+  #   user: 1000:1000
+  #   volumes:
+  #     - ./maintainerr:/opt/data
+  #   environment:
+  #     - TZ=${TZ}
+  #   ports:
+  #     - 6246:6246
+  #   restart: unless-stopped
+  #   networks:
+  #     - media-network
 
 networks:
   media-network:
