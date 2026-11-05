@@ -30,7 +30,7 @@ services:
       - VPN_PORT_FORWARDING=on  
       # Server list updater
       # See https://github.com/qdm12/gluetun-wiki/blob/main/setup/servers.md#update-the-vpn-servers-list
-      # - UPDATER_PERIOD=
+      - UPDATER_PERIOD=360h
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8000/v1/vpn/status"]
       interval: 60s
